@@ -9,9 +9,17 @@
                 </p>
                 <div class="mx-auto overflow-hidden w-320px flex justify-center">
                     <ul v-if="courses && courses.length > 0" class="text-left mx-auto">
-                        <li v-for="course in courses" v-bind:key="course.id">
-                            <img :src="course.image" />
-                            <p>{{course.headline}}</p>
+                        <li v-for="course in courses" v-bind:key="course.id" class="flex items-center justify-start my-2">
+                            <img :src="course.image" class="w-2/6 mr-2" />
+                            <div class="text-sm relative">
+                                <p class="mr-5">{{course.name}}</p>
+                                <p>{{"$"+course.total}}
+                                    <a href="javascript:void(0)" class="border-2 border-black rounded text-black hover:bg-tiffanyblue hover:text-white hover:border-tiffanyblue">
+                                        募資課程
+                                    </a>
+                                </p>
+                                <svg v-on:click="removeFromCart(course.id)" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="trash" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="absolute top-0 right-0 text-gray-300 w-4 inline cursor-pointer"><path fill="currentColor" d="M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z" class=""></path></svg>                                
+                            </div>
                         </li>
                     </ul>
                 </div>
@@ -35,32 +43,28 @@ export default {
   },
   created() {
     this.$nuxt.$on('add-to-cart', (data) => {
-        const removeItems = this.courses.filter((course)=>course.id == data.id)
-        if(removeItems && removeItems.length > 0) {
-            const items = removeItems.map((course)=>({"id":course.id, "coupon": ""}))
-            axios
-                .delete('https://api.hiskio.com/v2/carts', {items})
-                .then(response => {
-                    console.log(response)
-                    this.courses = this.courses.filter((course)=>course.id != data.id)          
-                }) 
-        } else {
-            const courses = [
-                ...this.courses,
-                data
-            ]
-            const items = courses.map((course)=>({"id":course.id, "coupon": ""}))
-            console.log(items)
-            axios
-                .post('https://api.hiskio.com/v2/carts', {
-                    items,
-                    coupon: ""
-                })
-                .then(response => {
-                    console.log(response.data.data)
-                    this.courses = response.data.data           
-                })
-        }
+        const courses = [
+            ...this.courses,
+            data
+        ]
+        const items = courses.map((course)=>({"id":course.id, "coupon": ""}))
+        console.log(items)
+        axios
+            .post('https://api.hiskio.com/v2/carts', {
+                items,
+                coupon: ""
+            })
+            .then(response => {
+                console.log(response.data.data)
+                this.courses = response.data.data           
+            }).catch(function (error) {
+                console.log(error);
+            }).finally(function () {
+                localStorage.courses= courses.map((course)=>(course.id))
+            });
+    }),
+    this.$nuxt.$on('remove-from-cart', (data) => {
+        this.removeFromCart(data.id)
     })
   },
   methods: {
@@ -69,6 +73,22 @@ export default {
       },
       closeCartList() {
           this.isClickedCart = false
+      },
+      removeFromCart(itemId) {
+        const removeItems = this.courses.filter((course)=>course.id == itemId)
+        if(removeItems && removeItems.length > 0) {
+            const items = removeItems.map((course)=>({"id":course.id, "coupon": ""}))
+            const courses = this.courses.filter((course)=>course.id != itemId)
+            this.courses = courses
+            localStorage.courses= courses.map((course)=>(course.id))
+            axios
+                .delete('https://api.hiskio.com/v2/carts', {items})
+                .then(response => {
+                    console.log(response)
+                }).catch(function (error) {
+                    console.log(error);
+                })
+        }
       }
   },
   beforeDestroy(){
